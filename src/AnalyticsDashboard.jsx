@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip } from 'chart.js';
+import ProductivityHeatmap from './ProductivityHeatmap'; // Import the new component
 
 ChartJS.register(ArcElement, Tooltip);
 
@@ -19,12 +20,49 @@ const formatTime = (milliseconds, format = 'full') => {
     if (hours === 0 && minutes === 0) result += `${seconds}s`;
     return result.trim();
   }
+  if (format === 'hms') {
+     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 };
 
 // --- Main Dashboard Component ---
 const AnalyticsDashboard = ({ tasks }) => {
-  // --- Data Processing ---
+  // --- Data Processing for Heatmap ---
+  const heatmapData = useMemo(() => {
+    if (!tasks || tasks.length === 0) return [];
+
+    const dailyTotals = tasks.reduce((acc, task) => {
+      const date = new Date(task.createdAt).toISOString().slice(0, 10);
+      const timeInMillis = task.timeSpent || 0;
+      acc[date] = (acc[date] || 0) + timeInMillis;
+      return acc;
+    }, {});
+    
+    const timeValues = Object.values(dailyTotals);
+    if (timeValues.length === 0) return [];
+
+    const maxTime = Math.max(...timeValues);
+    
+    return Object.entries(dailyTotals).map(([date, totalTime]) => {
+      let level = 0;
+      if (maxTime > 0) {
+        const percentage = (totalTime / maxTime) * 100;
+        if (percentage > 0 && percentage <= 25) level = 1;
+        else if (percentage > 25 && percentage <= 50) level = 2;
+        else if (percentage > 50 && percentage <= 75) level = 3;
+        else if (percentage > 75) level = 4;
+      }
+      
+      return {
+        date,
+        count: totalTime,
+        level,
+      };
+    });
+  }, [tasks]);
+
+  // --- Existing Data Processing ---
   const totalTime = tasks.reduce((acc, task) => acc + task.timeSpent, 0);
   const completedTasksCount = tasks.filter(task => task.completed).length;
   
@@ -38,7 +76,7 @@ const AnalyticsDashboard = ({ tasks }) => {
     datasets: [{
       data: sortedTasks.map(task => task.timeSpent),
       backgroundColor: sortedTasks.map((_, index) => `rgba(99, 102, 241, ${1 - index * 0.1})`),
-      borderColor: '#F9FAFB', // A light gray for a subtle border
+      borderColor: '#F9FAFB',
       borderWidth: 3,
       hoverOffset: 12,
     }],
@@ -52,7 +90,7 @@ const AnalyticsDashboard = ({ tasks }) => {
       legend: { display: false },
       tooltip: {
         enabled: true,
-        backgroundColor: '#111827', // Dark gray
+        backgroundColor: '#111827',
         titleFont: { size: 14, weight: 'bold' },
         bodyFont: { size: 12 },
         padding: 10,
@@ -106,6 +144,11 @@ const AnalyticsDashboard = ({ tasks }) => {
           </div>
         </div>
       </div>
+      
+      {/* Render the new Heatmap section */}
+      <div style={{ marginTop: '2rem' }}>
+        <ProductivityHeatmap data={heatmapData} />
+      </div>
     </div>
   );
 };
@@ -135,14 +178,13 @@ const TaskBreakdownItem = ({ task, totalTime }) => {
 };
 
 // --- Styles ---
-// Using JS objects for styling makes the component self-contained
 const styles = {
   dashboardContainer: { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
-  kpiRow: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' },
+  kpiRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' },
   kpiBox: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '0.75rem', padding: '1rem' },
   kpiTitle: { fontSize: '0.875rem', color: '#6B7280', margin: '0 0 0.25rem 0' },
   kpiValue: { fontSize: '1.5rem', fontWeight: 'bold', color: '#1F2937', margin: 0 },
-  mainContent: { display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '2rem', alignItems: 'flex-start' },
+  mainContent: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', alignItems: 'flex-start' },
   chartContainer: { display: 'flex', flexDirection: 'column', gap: '1rem' },
   breakdownContainer: { display: 'flex', flexDirection: 'column', gap: '1rem' },
   sectionTitle: { fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 },
