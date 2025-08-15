@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import './App.css'
+import AnalyticsDashboard from './AnalyticsDashboard'; // Import the new dashboard
 
 function App() {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [tasks, setTasks] = useState(() => {
-    // Load tasks from localStorage on initial render
     const savedTasks = localStorage.getItem('tasks');
     return savedTasks ? JSON.parse(savedTasks) : [];
   });
   const [newTask, setNewTask] = useState('');
   const [currentTask, setCurrentTask] = useState(null);
   const [showAddTask, setShowAddTask] = useState(false);
-
 
   useEffect(() => {
     localStorage.setItem('tasks', JSON.stringify(tasks));
@@ -33,7 +32,7 @@ function App() {
     const minutes = Math.floor((time / 60000) % 60);
     const seconds = Math.floor((time / 1000) % 60);
     const milliseconds = Math.floor((time / 10) % 100);
-    
+
     return {
       minutes: minutes.toString().padStart(2, '0'),
       seconds: seconds.toString().padStart(2, '0'),
@@ -61,16 +60,16 @@ function App() {
 
   const startTask = (taskId) => {
     if (currentTask) {
-      setTasks(tasks.map(task => 
-        task.id === currentTask.id 
+      setTasks(tasks.map(task =>
+        task.id === currentTask.id
           ? { ...task, isActive: false, timeSpent: task.timeSpent + time }
           : task
       ));
     }
 
     setCurrentTask(tasks.find(task => task.id === taskId));
-    setTasks(tasks.map(task => 
-      task.id === taskId 
+    setTasks(tasks.map(task =>
+      task.id === taskId
         ? { ...task, isActive: true }
         : { ...task, isActive: false }
     ));
@@ -89,8 +88,8 @@ function App() {
 
   const stopTask = () => {
     if (currentTask) {
-      setTasks(tasks.map(task => 
-        task.id === currentTask.id 
+      setTasks(tasks.map(task =>
+        task.id === currentTask.id
           ? { ...task, isActive: false, timeSpent: task.timeSpent + time }
           : task
       ));
@@ -102,8 +101,8 @@ function App() {
   };
 
   const completeTask = (taskId) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId 
+    setTasks(tasks.map(task =>
+      task.id === taskId
         ? { ...task, completed: !task.completed }
         : task
     ));
@@ -125,11 +124,10 @@ function App() {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Calculate time summaries
   const timeSummaries = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
 
@@ -137,16 +135,35 @@ function App() {
       total: tasks.reduce((acc, task) => acc + task.timeSpent, 0),
       today: tasks.reduce((acc, task) => {
         const taskDate = new Date(task.createdAt);
-        taskDate.setHours(0, 0, 0, 0);
-        return taskDate.getTime() === today.getTime() ? acc + task.timeSpent : acc;
+        return taskDate.toDateString() === today.toDateString() ? acc + task.timeSpent : acc;
       }, 0),
       week: tasks.reduce((acc, task) => {
         const taskDate = new Date(task.createdAt);
-        taskDate.setHours(0, 0, 0, 0);
         return taskDate >= weekStart ? acc + task.timeSpent : acc;
       }, 0)
     };
   }, [tasks]);
+
+  const exportTasksToCSV = () => {
+    const headers = ['Task Title', 'Time Spent (HH:MM:SS)', 'Completed', 'Date Created'];
+    const rows = tasks.map(task => {
+      const time = new Date(task.timeSpent).toISOString().substr(11, 8);
+      const date = new Date(task.createdAt).toLocaleDateString();
+      return `"${task.title}",${time},${task.completed ? 'Yes' : 'No'},${date}`;
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
+      + rows.join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "tasks.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="enterprise-app">
@@ -177,7 +194,7 @@ function App() {
                 </div>
                 <div className="timer-label">Current Session</div>
               </div>
-              
+
               {currentTask && (
                 <div className="current-task">
                   <div className="task-indicator">
@@ -191,29 +208,14 @@ function App() {
                 {isRunning ? (
                   <>
                     {isPaused ? (
-                      <button 
-                        className="btn btn-success"
-                        onClick={resumeTask}
-                      >
-                        Resume
-                      </button>
+                      <button className="btn btn-success" onClick={resumeTask}>Resume</button>
                     ) : (
-                      <button 
-                        className="btn btn-warning"
-                        onClick={pauseTask}
-                      >
-                        Pause
-                      </button>
+                      <button className="btn btn-warning" onClick={pauseTask}>Pause</button>
                     )}
-                    <button 
-                      className="btn btn-danger"
-                      onClick={stopTask}
-                    >
-                      Stop Timer
-                    </button>
+                    <button className="btn btn-danger" onClick={stopTask}>Stop Timer</button>
                   </>
                 ) : (
-                  <button 
+                  <button
                     className={`btn ${currentTask ? 'btn-primary' : 'btn-secondary'}`}
                     onClick={() => setIsRunning(true)}
                     disabled={!currentTask}
@@ -223,22 +225,19 @@ function App() {
                 )}
               </div>
             </div>
+          </section>
 
-            {/* Time Summary */}
-            <div className="time-summary">
-              <div className="summary-item">
-                <span className="summary-label">Today</span>
-                <span className="summary-value">{formatTaskTime(timeSummaries.today)}</span>
+          {/* New Analytics Section */}
+          <section className="tasks-section" style={{marginBottom: '2rem'}}>
+              <div className="tasks-header" style={{borderBottom: 'none', paddingBottom: '0'}}>
+                <div className="header-content">
+                  <h2 className="section-title">Productivity Dashboard</h2>
+                  <p className="section-subtitle">A visual summary of your tracked time</p>
+                </div>
               </div>
-              <div className="summary-item">
-                <span className="summary-label">This Week</span>
-                <span className="summary-value">{formatTaskTime(timeSummaries.week)}</span>
+              <div style={{marginTop: '1.5rem'}}>
+                <AnalyticsDashboard tasks={tasks} />
               </div>
-              <div className="summary-item">
-                <span className="summary-label">Total</span>
-                <span className="summary-value">{formatTaskTime(timeSummaries.total)}</span>
-              </div>
-            </div>
           </section>
 
           <section className="tasks-section">
@@ -247,12 +246,18 @@ function App() {
                 <h2 className="section-title">Task Management</h2>
                 <p className="section-subtitle">Organize and track your work</p>
               </div>
-              <button 
-                onClick={() => setShowAddTask(!showAddTask)}
-                className="btn btn-primary"
-              >
-                {showAddTask ? 'Cancel' : 'Add Task'}
-              </button>
+              <div>
+                <button
+                  onClick={() => setShowAddTask(!showAddTask)}
+                  className="btn btn-primary"
+                  style={{ marginRight: '1rem' }}
+                >
+                  {showAddTask ? 'Cancel' : 'Add Task'}
+                </button>
+                <button onClick={exportTasksToCSV} className="btn btn-secondary">
+                  Export CSV
+                </button>
+              </div>
             </div>
 
             {showAddTask && (
@@ -268,12 +273,7 @@ function App() {
                     style={{ color: '#1a1a1a', backgroundColor: '#ffffff' }}
                     autoFocus
                   />
-                  <button
-                    onClick={addTask}
-                    className="btn btn-success"
-                  >
-                    Add Task
-                  </button>
+                  <button onClick={addTask} className="btn btn-success">Add Task</button>
                 </div>
               </div>
             )}
@@ -283,18 +283,12 @@ function App() {
                 <div className="empty-state">
                   <div className="empty-icon">📋</div>
                   <h3 className="empty-title">No tasks yet</h3>
-                  <p className="empty-description">
-                    Add your first task to start tracking your productivity
-                  </p>
+                  <p className="empty-description">Add your first task to start tracking your productivity</p>
                 </div>
               ) : (
                 <>
-                  {/* Active Tasks */}
                   {tasks.filter(task => !task.completed).map(task => (
-                    <div 
-                      key={task.id} 
-                      className={`task-item ${task.isActive ? 'active' : ''}`}
-                    >
+                    <div key={task.id} className={`task-item ${task.isActive ? 'active' : ''}`}>
                       <div className="task-content">
                         <div className="task-header">
                           <input
@@ -305,50 +299,25 @@ function App() {
                           />
                           <div className="task-info">
                             <h4 className="task-title">{task.title}</h4>
-                            {task.timeSpent > 0 && (
-                              <span className="task-time">
-                                {formatTaskTime(task.timeSpent)}
-                              </span>
-                            )}
+                            {task.timeSpent > 0 && <span className="task-time">{formatTaskTime(task.timeSpent)}</span>}
                           </div>
                         </div>
-                        
                         <div className="task-actions">
                           {!task.completed && !task.isActive && (
-                            <button
-                              onClick={() => startTask(task.id)}
-                              className="btn btn-success btn-sm"
-                            >
-                              Start
-                            </button>
+                            <button onClick={() => startTask(task.id)} className="btn btn-success btn-sm">Start</button>
                           )}
-                          
-                          {task.isActive && (
-                            <span className="status-badge active">
-                              Active
-                            </span>
-                          )}
-                          
-                          <button
-                            onClick={() => deleteTask(task.id)}
-                            className="btn btn-danger btn-sm"
-                          >
-                            Delete
-                          </button>
+                          {task.isActive && <span className="status-badge active">Active</span>}
+                          <button onClick={() => deleteTask(task.id)} className="btn btn-danger btn-sm">Delete</button>
                         </div>
                       </div>
                     </div>
                   ))}
 
-                  {/* Completed Tasks */}
                   {tasks.filter(task => task.completed).length > 0 && (
                     <div className="completed-tasks-section">
                       <h3 className="completed-tasks-title">Completed Tasks</h3>
                       {tasks.filter(task => task.completed).map(task => (
-                        <div 
-                          key={task.id} 
-                          className="task-item completed"
-                        >
+                        <div key={task.id} className="task-item completed">
                           <div className="task-content">
                             <div className="task-header">
                               <input
@@ -359,24 +328,12 @@ function App() {
                               />
                               <div className="task-info">
                                 <h4 className="task-title">{task.title}</h4>
-                                {task.timeSpent > 0 && (
-                                  <span className="task-time">
-                                    {formatTaskTime(task.timeSpent)}
-                                  </span>
-                                )}
+                                {task.timeSpent > 0 && <span className="task-time">{formatTaskTime(task.timeSpent)}</span>}
                               </div>
                             </div>
-                            
                             <div className="task-actions">
-                              <span className="status-badge completed">
-                                Done
-                              </span>
-                              <button
-                                onClick={() => deleteTask(task.id)}
-                                className="btn btn-danger btn-sm"
-                              >
-                                Delete
-                              </button>
+                              <span className="status-badge completed">Done</span>
+                              <button onClick={() => deleteTask(task.id)} className="btn btn-danger btn-sm">Delete</button>
                             </div>
                           </div>
                         </div>
