@@ -15,6 +15,7 @@
     "react-activity-calendar": "^2.7.13",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
     "react-tooltip": "^5.29.1"
   },
   "devDependencies": {
