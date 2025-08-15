@@ -308,10 +308,11 @@ body {
 .tasks-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 2.5rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  gap: 2rem;
 }
 .section-title {
   font-size: 1.9rem;
@@ -669,21 +670,55 @@ input:focus {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: linear-gradient(135deg, #868cff, #be9ff3);
-  color: #fff;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.9rem;
-  font-weight: 600;
+  background: linear-gradient(135deg, #4f64f1 0%, #9c6cdf 100%);
+  color: #ffffff;
+  padding: 1rem 1.75rem;
+  font-size: 0.95rem;
+  font-weight: 700;
   border: none;
-  border-radius: 9999px;
+  border-radius: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 32px rgba(79, 100, 241, 0.25);
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(12px);
+}
+
+.ai-coach-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.ai-coach-button:hover::before {
+  left: 100%;
 }
 
 .ai-coach-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 16px 48px rgba(79, 100, 241, 0.35);
+  background: linear-gradient(135deg, #5b6ff7 0%, #a87de8 100%);
+}
+
+.ai-coach-button:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+.ai-coach-button svg {
+  transition: transform 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.ai-coach-button:hover svg {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .ai-modal-overlay {
@@ -1168,5 +1203,32 @@ input:focus {
   .settings-icon-large {
     width: 48px;
     height: 48px;
+  }
+}
+
+/*────────────────── Responsive AI Coach Button ──────────────────*/
+@media (max-width: 768px) {
+  .ai-coach-button {
+    padding: 0.875rem 1.5rem;
+    font-size: 0.9rem;
+    gap: 0.5rem;
+  }
+  
+  .ai-coach-button svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-coach-button {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.85rem;
+    gap: 0.4rem;
+  }
+  
+  .ai-coach-button svg {
+    width: 16px;
+    height: 16px;
   }
 }

@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './App.css';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import AiCoachModal from './AiCoachModal';
+import jsPDF from 'jspdf';
+// FIX 1: Import autoTable as a named export
+import autoTable from 'jspdf-autotable';
 
 // --- Enhanced Settings Modal Component ---
 const SettingsModal = ({ settings, onSave, onCancel }) => {
@@ -82,67 +85,28 @@ const SettingsModal = ({ settings, onSave, onCancel }) => {
                   <span className="setting-label-text">Focus Session</span>
                   <span className="setting-label-unit">minutes</span>
                 </label>
-                <input 
-                  type="number" 
-                  id="work" 
-                  name="work" 
-                  value={localSettings.work} 
-                  onChange={handleChange}
-                  min="1"
-                  max="120"
-                  className="setting-input"
-                />
+                <input type="number" id="work" name="work" value={localSettings.work} onChange={handleChange} min="1" max="120" className="setting-input"/>
               </div>
-              
               <div className="setting-item">
                 <label htmlFor="shortBreak" className="setting-label">
                   <span className="setting-label-text">Short Break</span>
                   <span className="setting-label-unit">minutes</span>
                 </label>
-                <input 
-                  type="number" 
-                  id="shortBreak" 
-                  name="shortBreak" 
-                  value={localSettings.shortBreak} 
-                  onChange={handleChange}
-                  min="1"
-                  max="30"
-                  className="setting-input"
-                />
+                <input type="number" id="shortBreak" name="shortBreak" value={localSettings.shortBreak} onChange={handleChange} min="1" max="30" className="setting-input"/>
               </div>
-              
               <div className="setting-item">
                 <label htmlFor="longBreak" className="setting-label">
                   <span className="setting-label-text">Long Break</span>
                   <span className="setting-label-unit">minutes</span>
                 </label>
-                <input 
-                  type="number" 
-                  id="longBreak" 
-                  name="longBreak" 
-                  value={localSettings.longBreak} 
-                  onChange={handleChange}
-                  min="1"
-                  max="60"
-                  className="setting-input"
-                />
+                <input type="number" id="longBreak" name="longBreak" value={localSettings.longBreak} onChange={handleChange} min="1" max="60" className="setting-input"/>
               </div>
-              
               <div className="setting-item">
                 <label htmlFor="sessionsPerLongBreak" className="setting-label">
                   <span className="setting-label-text">Sessions before Long Break</span>
                   <span className="setting-label-unit">count</span>
                 </label>
-                <input 
-                  type="number" 
-                  id="sessionsPerLongBreak" 
-                  name="sessionsPerLongBreak" 
-                  value={localSettings.sessionsPerLongBreak} 
-                  onChange={handleChange}
-                  min="1"
-                  max="10"
-                  className="setting-input"
-                />
+                <input type="number" id="sessionsPerLongBreak" name="sessionsPerLongBreak" value={localSettings.sessionsPerLongBreak} onChange={handleChange} min="1" max="10" className="setting-input"/>
               </div>
             </div>
           </div>
@@ -156,28 +120,17 @@ const SettingsModal = ({ settings, onSave, onCancel }) => {
                   <span className="toggle-description">Automatically start break timers</span>
                 </div>
                 <label className="toggle-switch">
-                  <input 
-                    type="checkbox" 
-                    name="autoStartBreaks" 
-                    checked={localSettings.autoStartBreaks} 
-                    onChange={handleChange}
-                  />
+                  <input type="checkbox" name="autoStartBreaks" checked={localSettings.autoStartBreaks} onChange={handleChange}/>
                   <span className="toggle-slider"></span>
                 </label>
               </div>
-              
               <div className="setting-toggle-item">
                 <div className="toggle-label">
                   <span className="toggle-text">Auto-start pomodoros</span>
                   <span className="toggle-description">Automatically start focus sessions</span>
                 </div>
                 <label className="toggle-switch">
-                  <input 
-                    type="checkbox" 
-                    name="autoStartPomodoros" 
-                    checked={localSettings.autoStartPomodoros} 
-                    onChange={handleChange}
-                  />
+                  <input type="checkbox" name="autoStartPomodoros" checked={localSettings.autoStartPomodoros} onChange={handleChange}/>
                   <span className="toggle-slider"></span>
                 </label>
               </div>
@@ -193,28 +146,17 @@ const SettingsModal = ({ settings, onSave, onCancel }) => {
                   <span className="toggle-description">Play sounds when timers complete</span>
                 </div>
                 <label className="toggle-switch">
-                  <input 
-                    type="checkbox" 
-                    name="soundEnabled" 
-                    checked={localSettings.soundEnabled} 
-                    onChange={handleChange}
-                  />
+                  <input type="checkbox" name="soundEnabled" checked={localSettings.soundEnabled} onChange={handleChange}/>
                   <span className="toggle-slider"></span>
                 </label>
               </div>
-              
               <div className="setting-toggle-item">
                 <div className="toggle-label">
                   <span className="toggle-text">Desktop notifications</span>
                   <span className="toggle-description">Show browser notifications</span>
                 </div>
                 <label className="toggle-switch">
-                  <input 
-                    type="checkbox" 
-                    name="desktopNotifications" 
-                    checked={localSettings.desktopNotifications} 
-                    onChange={handleChange}
-                  />
+                  <input type="checkbox" name="desktopNotifications" checked={localSettings.desktopNotifications} onChange={handleChange}/>
                   <span className="toggle-slider"></span>
                 </label>
               </div>
@@ -272,10 +214,23 @@ function App() {
   const [pomodoroState, setPomodoroState] = useState('work');
   const [pomodoroCount, setPomodoroCount] = useState(0);
 
-  // --- Audio Notification ---
+  // --- Notification Logic ---
+  const showNotification = useCallback((message) => {
+    if (!pomodoroSettings.desktopNotifications || !('Notification' in window)) return;
+
+    if (Notification.permission === 'granted') {
+      new Notification('Time Tracker Pro', { body: message, icon: '/vite.svg' });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new Notification('Time Tracker Pro', { body: message, icon: '/vite.svg' });
+        }
+      });
+    }
+  }, [pomodoroSettings.desktopNotifications]);
+
   const playSound = useCallback(() => {
     if (!pomodoroSettings.soundEnabled) return;
-    
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     if (!audioContext) return;
     const oscillator = audioContext.createOscillator();
@@ -289,10 +244,17 @@ function App() {
     oscillator.stop(audioContext.currentTime + 1);
   }, [pomodoroSettings.soundEnabled]);
   
-  // --- Pomodoro Cycle Logic ---
+  const getPomodoroStatusText = useCallback(() => {
+    if (pomodoroState === 'work') return 'Time to Focus';
+    if (pomodoroState === 'shortBreak') return 'Short Break';
+    return 'Long Break';
+  }, [pomodoroState]);
+
   const handlePomodoroCompletion = useCallback(() => {
     playSound();
-    setIsRunning(false);
+    
+    let nextState = '';
+    let notificationMessage = '';
 
     if (pomodoroState === 'work') {
       const newCount = pomodoroCount + 1;
@@ -301,32 +263,28 @@ function App() {
       setTasks(prev => [...prev, pomodoroTask]);
 
       if (newCount % pomodoroSettings.sessionsPerLongBreak === 0) {
-        setPomodoroState('longBreak');
+        nextState = 'longBreak';
+        notificationMessage = "Time for a long break!";
         setTime(pomodoroSettings.longBreak);
-        // Auto-start break if enabled
-        if (pomodoroSettings.autoStartBreaks) {
-          setIsRunning(true);
-          setIsPaused(false);
-        }
       } else {
-        setPomodoroState('shortBreak');
+        nextState = 'shortBreak';
+        notificationMessage = "Time for a short break!";
         setTime(pomodoroSettings.shortBreak);
-        // Auto-start break if enabled
-        if (pomodoroSettings.autoStartBreaks) {
-          setIsRunning(true);
-          setIsPaused(false);
-        }
       }
-    } else {
-      setPomodoroState('work');
+      setPomodoroState(nextState);
+      if (pomodoroSettings.autoStartBreaks) setIsRunning(true); else setIsRunning(false);
+
+    } else { // End of a break
+      nextState = 'work';
+      notificationMessage = "Time to focus!";
       setTime(pomodoroSettings.work);
-      // Auto-start pomodoro if enabled
-      if (pomodoroSettings.autoStartPomodoros) {
-        setIsRunning(true);
-        setIsPaused(false);
-      }
+      setPomodoroState(nextState);
+      if (pomodoroSettings.autoStartPomodoros) setIsRunning(true); else setIsRunning(false);
     }
-  }, [pomodoroCount, pomodoroState, playSound, pomodoroSettings]);
+    
+    showNotification(notificationMessage);
+
+  }, [pomodoroCount, pomodoroState, playSound, pomodoroSettings, showNotification]);
 
   // --- Core Timer & Document Title Effect ---
   useEffect(() => {
@@ -352,18 +310,12 @@ function App() {
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, isPaused, timerMode, time, handlePomodoroCompletion]);
+  }, [isRunning, isPaused, timerMode, time, handlePomodoroCompletion, getPomodoroStatusText]);
 
   // --- Local Storage Sync ---
-  useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-  }, [tasks]);
+  useEffect(() => { localStorage.setItem('tasks', JSON.stringify(tasks)); }, [tasks]);
+  useEffect(() => { localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings)); }, [pomodoroSettings]);
 
-  useEffect(() => {
-    localStorage.setItem('pomodoroSettings', JSON.stringify(pomodoroSettings));
-  }, [pomodoroSettings]);
-
-  // --- Time Formatting ---
   const formatDisplayTime = (timeInMillis) => {
     const totalSeconds = Math.floor(timeInMillis / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -373,8 +325,6 @@ function App() {
       ? `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milliseconds.toString().padStart(2, '0')}`
       : `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
-
-  // --- Control Functions ---
   const handleStartPauseResume = () => {
     if (isRunning) setIsPaused(!isPaused);
     else {
@@ -415,24 +365,10 @@ function App() {
     setPomodoroSettings(prev => ({...prev, ...newSettings}));
     setShowSettings(false);
     if (!isRunning) {
+      if (timerMode === 'pomodoro') {
         setTime(newSettings[pomodoroState] || newSettings.work);
+      }
     }
-    
-    // Apply auto-start settings if enabled
-    if (newSettings.autoStartBreaks && pomodoroState !== 'work') {
-      setIsRunning(true);
-      setIsPaused(false);
-    }
-    if (newSettings.autoStartPomodoros && pomodoroState === 'work') {
-      setIsRunning(true);
-      setIsPaused(false);
-    }
-  };
-
-  const getPomodoroStatusText = () => {
-    if (pomodoroState === 'work') return 'Time to Focus';
-    if (pomodoroState === 'shortBreak') return 'Short Break';
-    return 'Long Break';
   };
   
   const progressPercentage = useMemo(() => {
@@ -443,12 +379,68 @@ function App() {
     return (elapsedTime / totalDuration) * 100;
   }, [time, timerMode, pomodoroState, pomodoroSettings, isRunning]);
 
-  // --- Task Management ---
   const addTask = () => { if (newTask.trim()) { setTasks([...tasks, { id: Date.now(), title: newTask.trim(), completed: false, timeSpent: 0, isActive: false, createdAt: new Date().toISOString() }]); setNewTask(''); setShowAddTask(false); } };
   const startTask = (taskId) => { if (currentTask) { setTasks(tasks.map(t => t.id === currentTask.id ? { ...t, isActive: false, timeSpent: t.timeSpent + time } : t)); } const taskToStart = tasks.find(t => t.id === taskId); setCurrentTask(taskToStart); setTasks(tasks.map(t => ({ ...t, isActive: t.id === taskId }))); setTime(0); setIsRunning(true); setIsPaused(false); };
   const completeTask = (taskId) => { setTasks(tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t)); };
   const deleteTask = (taskId) => { setTasks(tasks.filter(t => t.id !== taskId)); if (currentTask && currentTask.id === taskId) { setCurrentTask(null); setIsRunning(false); setIsPaused(false); setTime(0); } };
-  const formatTaskTime = (ms) => { const mins = Math.floor(ms / 60000); const secs = Math.floor((ms / 1000) % 60); return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`; };
+  
+  const formatTaskTime = (ms) => {
+    if (!ms) return '00:00:00';
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+  
+  const exportTasksToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const totalTimeTracked = tasks.reduce((acc, task) => acc + task.timeSpent, 0);
+
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Productivity Report', 105, 20, { align: 'center' });
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, 105, 28, { align: 'center' });
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Summary', 14, 45);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Total Tasks: ${tasks.length}`, 14, 52);
+      doc.text(`Total Time Tracked: ${formatTaskTime(totalTimeTracked)}`, 14, 59);
+
+      const tableColumn = ["Task Title", "Time Spent (HH:MM:SS)", "Status", "Date Created"];
+      const tableRows = [];
+
+      tasks.forEach(task => {
+        const taskData = [
+          task.title,
+          formatTaskTime(task.timeSpent),
+          task.completed ? "Completed" : "In Progress",
+          new Date(task.createdAt).toLocaleDateString(),
+        ];
+        tableRows.push(taskData);
+      });
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 70,
+        theme: 'grid',
+        headStyles: { fillColor: [79, 100, 241] },
+        styles: { font: 'helvetica', fontSize: 10 },
+      });
+
+      doc.save(`productivity_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+    }
+  };
+  
   const exportTasksToCSV = () => {
     const headers = ['Task Title', 'Time Spent (HH:MM:SS)', 'Completed', 'Date Created'];
     const rows = tasks.map(task => {
@@ -464,7 +456,7 @@ function App() {
     link.click();
     document.body.removeChild(link);
   };
-  
+
   return (
     <div className="enterprise-app">
       {showSettings && <SettingsModal settings={pomodoroSettings} onSave={saveSettings} onCancel={() => setShowSettings(false)} />}
@@ -529,7 +521,7 @@ function App() {
           </section>
 
           <section className="tasks-section" style={{ marginBottom: '2rem' }}>
-             <div className="tasks-header" style={{borderBottom: 'none', paddingBottom: '0'}}>
+            <div className="tasks-header" style={{borderBottom: 'none', paddingBottom: '0'}}>
                 <div className="header-content">
                   <h2 className="section-title">Productivity Dashboard</h2>
                   <p className="section-subtitle">A visual summary of your tracked time</p>
@@ -555,12 +547,15 @@ function App() {
                   <button onClick={() => setShowAddTask(!showAddTask)} className="btn btn-primary" style={{ marginRight: '1rem' }}>
                     {showAddTask ? 'Cancel' : 'Add Task'}
                   </button>
-                   <button onClick={exportTasksToCSV} className="btn btn-secondary">
+                  <button onClick={exportTasksToCSV} className="btn btn-secondary" style={{ marginRight: '1rem' }}>
                     Export CSV
+                  </button>
+                  <button onClick={exportTasksToPDF} className="btn btn-secondary">
+                    Export PDF
                   </button>
                 </div>
               </div>
-
+              
               {showAddTask && (
                 <div className="task-form">
                   <div className="form-container">
